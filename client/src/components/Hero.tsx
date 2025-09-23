@@ -4,9 +4,9 @@ import { Shield, ArrowRight, Play } from "lucide-react"
 import heroImage from "@assets/generated_images/Family_safely_using_technology_together_7a95292a.png"
 
 export default function Hero() {
-  const handleDownload = () => {
-    console.log('Download SafeBrowse triggered from hero')
-    // TODO: remove mock functionality - replace with actual download logic
+  const handleJoinWaitlist = () => {
+    console.log('Join Waitlist triggered from hero')
+    // TODO: remove mock functionality - replace with actual waitlist logic
   }
 
   const handleWatchDemo = () => {
@@ -52,11 +52,11 @@ export default function Hero() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Button 
               size="lg" 
-              onClick={handleDownload}
+              onClick={handleJoinWaitlist}
               className="bg-white text-primary hover:bg-white/90 border-white/20"
-              data-testid="button-download-hero"
+              data-testid="button-join-waitlist-hero"
             >
-              Download SafeBrowse
+              Join Waitlist
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button 
