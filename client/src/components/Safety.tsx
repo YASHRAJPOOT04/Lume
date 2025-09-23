@@ -56,8 +56,7 @@ export default function Safety() {
             Trusted Protection
           </Badge>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6" data-testid="text-safety-title">
-            Built for Families,
-            <span className="block text-primary">Trusted by Parents</span>
+            Built for Kids
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto" data-testid="text-safety-subtitle">
             Every feature of SafeBrowse is designed with your family's safety, privacy, and peace of mind as our top priority.
