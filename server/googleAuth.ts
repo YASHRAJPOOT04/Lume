@@ -3,6 +3,7 @@ import { Strategy, type VerifyFunction } from "openid-client/passport";
 
 import passport from "passport";
 import session from "express-session";
+import memorystore from "memorystore";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
@@ -28,18 +29,40 @@ if (!process.env.GOOGLE_CALLBACK_URL) {
 }
 
 async function getGoogleOidcConfig() {
-  // Google issuer discovery; pass client_id per openid-client usage in this project
+  // Google issuer discovery with client_id and client_secret
   return await client.discovery(
     new URL("https://accounts.google.com"),
     process.env.GOOGLE_CLIENT_ID!,
+    process.env.GOOGLE_CLIENT_SECRET!,
   );
 }
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  // Use in-memory session store in development to avoid DB connectivity blockers
+  if (process.env.USE_MEMORY_SESSION === "1" || process.env.NODE_ENV !== "production") {
+    const MemoryStore = memorystore(session);
+    const memoryStore = new MemoryStore({ checkPeriod: sessionTtl });
+    return session({
+      secret: process.env.SESSION_SECRET!,
+      store: memoryStore,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: false,
+        maxAge: sessionTtl,
+      },
+    });
+  }
+
   const PgStore = connectPg(session);
   const sessionStore = new PgStore({
-    conString: process.env.DATABASE_URL,
+    // Ensure SSL when connecting to Render Postgres
+    conObject: {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    },
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",
@@ -103,9 +126,15 @@ export async function setupAuth(app: Express) {
     {
       name: "google",
       config,
-      scope: "openid email profile offline_access",
+      scope: "openid email profile",
       callbackURL: process.env.GOOGLE_CALLBACK_URL!,
-    },
+      // Provide confidential client credentials for token exchange
+      client: {
+        token_endpoint_auth_method: "client_secret_post",
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      },
+    } as any,
     verify,
   );
   passport.use(strategy);
@@ -114,16 +143,32 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    passport.authenticate("google", {
+    // Cast to any to allow non-typed Google params like access_type
+    const options: any = {
       prompt: "consent",
-      scope: ["openid", "email", "profile", "offline_access"],
-    })(req, res, next);
+      scope: ["openid", "email", "profile"],
+      access_type: "offline",
+    };
+    passport.authenticate("google", options)(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
-    passport.authenticate("google", {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+    passport.authenticate("google", (err: any, user: Express.User | false | null, info: unknown) => {
+      if (err) {
+        console.error("Google OAuth callback error:", err, info);
+        return res.status(500).json({ message: err.message || "OAuth error", info });
+      }
+      if (!user) {
+        console.error("Google OAuth: no user returned", info);
+        return res.redirect("/api/login");
+      }
+      req.logIn(user as Express.User, (loginErr: any) => {
+        if (loginErr) {
+          console.error("Google OAuth login error:", loginErr);
+          return res.status(500).json({ message: loginErr.message || "Login error" });
+        }
+        return res.redirect("/");
+      });
     })(req, res, next);
   });
 
