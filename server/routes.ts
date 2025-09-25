@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+// Swap Replit auth for Google auth
+import { setupAuth, isAuthenticated } from "./googleAuth";
 import { insertWaitlistEntrySchema } from "@shared/schema";
 import { z } from "zod";
 
