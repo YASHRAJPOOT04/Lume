@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button"
-import { Shield, Menu, X } from "lucide-react"
+import { Shield, Menu, X, User, LogOut } from "lucide-react"
 import { useState } from "react"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { isAuthenticated, user, login, logout, isLoading } = useAuth()
 
-  const handleDownload = () => {
-    console.log('Download SafeBrowse triggered')
-    // TODO: remove mock functionality - replace with actual download logic
+  const handleJoinWaitlist = () => {
+    // Scroll to hero section where waitlist button is
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   const handleDemo = () => {
@@ -43,9 +45,27 @@ export default function Header() {
             <Button variant="ghost" onClick={handleDemo} data-testid="button-demo">
               Request Demo
             </Button>
-            <Button onClick={handleDownload} data-testid="button-download">
-              Download SafeBrowse
-            </Button>
+            {!isAuthenticated && !isLoading && (
+              <>
+                <Button variant="ghost" onClick={login} data-testid="button-login">
+                  Login
+                </Button>
+                <Button onClick={handleJoinWaitlist} data-testid="button-join-waitlist">
+                  Join Waitlist
+                </Button>
+              </>
+            )}
+            {isAuthenticated && user && (
+              <>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  {user.firstName} {user.lastName}
+                </div>
+                <Button variant="ghost" size="sm" onClick={logout} data-testid="button-logout">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -75,9 +95,28 @@ export default function Header() {
                 <Button variant="ghost" onClick={handleDemo} data-testid="button-demo-mobile">
                   Request Demo
                 </Button>
-                <Button onClick={handleDownload} data-testid="button-download-mobile">
-                  Download SafeBrowse
-                </Button>
+                {!isAuthenticated && !isLoading && (
+                  <>
+                    <Button variant="ghost" onClick={login} data-testid="button-login-mobile">
+                      Login
+                    </Button>
+                    <Button onClick={handleJoinWaitlist} data-testid="button-join-waitlist-mobile">
+                      Join Waitlist
+                    </Button>
+                  </>
+                )}
+                {isAuthenticated && user && (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <User className="h-4 w-4" />
+                      {user.firstName} {user.lastName}
+                    </div>
+                    <Button variant="ghost" onClick={logout} data-testid="button-logout-mobile">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>

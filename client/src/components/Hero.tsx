@@ -1,18 +1,70 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Shield, ArrowRight, Play } from "lucide-react"
+import { Shield, ArrowRight, Play, CheckCircle, Loader2 } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
+import { useWaitlistCount, useWaitlistStatus, useJoinWaitlist } from "@/hooks/useWaitlist"
+import { useToast } from "@/hooks/use-toast"
 import heroImage from "@assets/generated_images/Family_safely_using_technology_together_7a95292a.png"
 
 export default function Hero() {
-  const handleJoinWaitlist = () => {
-    console.log('Join Waitlist triggered from hero')
-    // TODO: remove mock functionality - replace with actual waitlist logic
-  }
+  const { isAuthenticated, login, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
+  
+  // Waitlist queries
+  const { data: waitlistCount } = useWaitlistCount();
+  const { data: waitlistStatus } = useWaitlistStatus();
+  const joinWaitlistMutation = useJoinWaitlist();
+
+  const handleJoinWaitlist = async () => {
+    if (!isAuthenticated) {
+      login();
+      return;
+    }
+
+    if (waitlistStatus?.hasJoined) {
+      toast({
+        title: "Already on waitlist!",
+        description: "You're already signed up for early access to SafeBrowse.",
+      });
+      return;
+    }
+
+    try {
+      await joinWaitlistMutation.mutateAsync({});
+      toast({
+        title: "Welcome to the waitlist!",
+        description: "You'll be notified when SafeBrowse becomes available.",
+      });
+    } catch (error) {
+      toast({
+        title: "Something went wrong",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleWatchDemo = () => {
     console.log('Watch Demo triggered')
     // TODO: remove mock functionality - replace with actual demo video
   }
+
+  const getJoinButtonText = () => {
+    if (authLoading || joinWaitlistMutation.isPending) return "Loading...";
+    if (!isAuthenticated) return "Join Waitlist";
+    if (waitlistStatus?.hasJoined) return "Already Joined";
+    return "Join Waitlist";
+  };
+
+  const getJoinButtonIcon = () => {
+    if (authLoading || joinWaitlistMutation.isPending) {
+      return <Loader2 className="ml-2 h-5 w-5 animate-spin" />;
+    }
+    if (waitlistStatus?.hasJoined) {
+      return <CheckCircle className="ml-2 h-5 w-5" />;
+    }
+    return <ArrowRight className="ml-2 h-5 w-5" />;
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -48,16 +100,18 @@ export default function Hero() {
             assessment work together to keep kids safe online.
           </p>
 
+
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
             <Button 
               size="lg" 
               onClick={handleJoinWaitlist}
+              disabled={authLoading || joinWaitlistMutation.isPending}
               className="bg-white text-primary hover:bg-white/90 border-white/20"
               data-testid="button-join-waitlist-hero"
             >
-              Join Waitlist
-              <ArrowRight className="ml-2 h-5 w-5" />
+              {getJoinButtonText()}
+              {getJoinButtonIcon()}
             </Button>
             <Button 
               variant="outline" 
@@ -70,6 +124,15 @@ export default function Hero() {
               Watch Demo
             </Button>
           </div>
+
+          {/* Waitlist Count */}
+          {waitlistCount && (
+            <div className="mb-8">
+              <p className="text-blue-100 text-lg" data-testid="text-waitlist-count">
+                Join <span className="font-bold text-white">{waitlistCount.count.toLocaleString()}</span> families already on the waitlist
+              </p>
+            </div>
+          )}
 
           {/* Trust Indicators */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-blue-200 text-sm">
